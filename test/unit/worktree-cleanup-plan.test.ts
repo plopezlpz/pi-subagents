@@ -101,7 +101,7 @@ function writeManifest(input: {
 			},
 		}],
 	}, null, 2), "utf-8");
-	if (patch.changed) fs.writeFileSync(patch.path, "captured patch\n", "utf-8");
+	if (patch.changed) fs.writeFileSync(patch.path, execFileSync("git", ["-C", worktree.path, "diff", "--binary", baseCommit, "HEAD"], { encoding: "utf-8" }), "utf-8");
 }
 
 function entriesByPath(plan: WorktreeCleanupPlan): Map<string, WorktreeCleanupPlan["entries"][number]> {

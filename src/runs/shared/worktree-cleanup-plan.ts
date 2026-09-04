@@ -15,6 +15,7 @@ import type {
 } from "../../shared/types.ts";
 import { getAgentDir } from "../../shared/utils.ts";
 import { isTerminalParallelHandoffChildStatus } from "./parallel-handoff.ts";
+import { validateWorktreePatchRepresentsCurrentWorktree } from "./worktree.ts";
 
 export const WORKTREE_CLEANUP_PLAN_VERSION = 1 as const;
 export const WORKTREE_CLEANUP_PLAN_TTL_MS = 30 * 60 * 1000;
@@ -572,7 +573,7 @@ function resolveBranchTip(repoRoot: string, branch: string): { value?: string; e
 	return { value: result.stdout.trim() };
 }
 
-function isPatchCaptured(record: ManifestMetadataRecord, worktreePath: string): { path?: string; error?: string } {
+function isPatchCaptured(record: ManifestMetadataRecord, worktreePath: string, baseCommit: string): { path?: string; error?: string } {
 	const patchPath = metadataPatchPath(record);
 	if (!patchPath || record.child.patch?.error !== undefined || record.child.patch?.changed !== true) return {};
 	const inspection = inspectPath(patchPath);
@@ -587,6 +588,8 @@ function isPatchCaptured(record: ManifestMetadataRecord, worktreePath: string): 
 	if (!patchStat.isFile()) return { error: "captured handoff patch is not a file" };
 	if (pathInside(worktreePath, inspection.realpath)) return { error: "durable handoff patch lives inside the worktree" };
 	if (patchStat.size <= 0) return { error: "captured handoff patch is empty" };
+	const validationError = validateWorktreePatchRepresentsCurrentWorktree(worktreePath, baseCommit, patchPath);
+	if (validationError) return { error: `captured handoff patch failed validation: ${validationError}` };
 	return { path: patchPath };
 }
 
@@ -672,7 +675,7 @@ function buildManagedEntry(input: {
 	const branchTipIsAncestor = ancestor.status === 0;
 	let divergenceSafe = diff.status === 0;
 	if (!divergenceSafe) {
-		const captured = isPatchCaptured(record, worktreePath);
+		const captured = isPatchCaptured(record, worktreePath, resolvedBase.value);
 		if (captured.error) return blockedEntry(entry, "ineligible", "keep", captured.error);
 		if (captured.path) {
 			entry.patchPath = captured.path;
