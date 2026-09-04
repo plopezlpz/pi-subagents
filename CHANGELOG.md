@@ -5,6 +5,7 @@
 ### Fixed
 - Lazy-load prompt audit optional Pi peers. Thanks [@VladimirGVP](https://github.com/VladimirGVP) for #1860.
 - Key subagent children launched under an explicit `sessionDir` by their run id so concurrent children resolve distinct session files instead of sharing `run-0`. Thanks to [@dat9uy](https://github.com/dat9uy) for #1859 and #1858.
+- Ignore stale model-not-found exclusions once the active model registry contains that model again. Thanks [@x1prog](https://github.com/x1prog) for #1862.
 
 ## [0.65.0] - 2026-09-04
 
